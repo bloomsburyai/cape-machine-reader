@@ -1,16 +1,17 @@
-import sys
 import os
+import sys
 import subprocess
 from package_settings import NAME, VERSION, PACKAGES, DESCRIPTION
 from setuptools import setup
 
-# TODO is there a better way ? dependency_links seems to be deprecated and to require a version
-_THIS_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__)))
-if "dependency" in os.path.split(_THIS_FOLDER)[1]:
+# TODO is there a better way ? dependencies seem to always require the version
+# Calling only at the egg_info step gives us the wanted depth first behavior
+if 'egg_info' in sys.argv and os.getenv('CAPE_DEPENDENCIES', 'False').lower() == 'true':
     pip3_executable = os.path.join(os.path.abspath(os.path.join(os.path.dirname(sys.executable))), 'pip3')
     if not os.path.isfile(pip3_executable):
         pip3_executable = 'pip3'
-    command = subprocess.run(['pip3', 'install', '--upgrade', '-r', 'requirements.txt'], check=True)
+    subprocess.check_call([pip3_executable, 'install','--no-warn-conflicts','--upgrade', '-r', 'requirements.txt'])
+
 setup(
     name=NAME,
     version=VERSION,
