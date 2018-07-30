@@ -10,7 +10,7 @@ if 'egg_info' in sys.argv and os.getenv('CAPE_DEPENDENCIES', 'False').lower() ==
     pip3_executable = os.path.join(os.path.abspath(os.path.join(os.path.dirname(sys.executable))), 'pip3')
     if not os.path.isfile(pip3_executable):
         pip3_executable = 'pip3'
-    subprocess.check_call([pip3_executable, 'install','--no-warn-conflicts','--upgrade', '-r', 'requirements.txt'])
+    subprocess.check_call([pip3_executable, 'install', '--upgrade', '-r', 'requirements.txt'])
 
 setup(
     name=NAME,
