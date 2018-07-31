@@ -37,8 +37,8 @@ class MachineReader:
         :return: two logit score distributions over the tokens of the document, for start and end span
             positions, and the number of tokens in the before_overlap and after_overlap strings
         """
+        doc = self._combine_overlaps(text, before_overlap, after_overlap)
         if document_embedding is None:
-            doc = self._combine_overlaps(text, before_overlap, after_overlap)
             document_embedding = self.get_document_embedding(doc)
 
         n_total, n_before, n_text, n_after = map(self._count_tokens, [doc, before_overlap, text, after_overlap])
