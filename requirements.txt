@@ -1,6 +1,7 @@
 # Please specify a version/commit to have consistent behaviour
 
 # General libraries
+dataclasses==0.6
 pytest==3.6.4
 numpy==1.15.0
 pyinterval==1.2.0
