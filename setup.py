@@ -10,9 +10,11 @@ setup(
     packages=PACKAGES,
     include_package_data=True,
     install_requires=[
+        'dataclasses==0.6',
         'pytest==3.6.4',
         'numpy==1.15.0',
         'pyinterval==1.2.0',
+
     ],
     package_data={
         '': ['*.*'],
