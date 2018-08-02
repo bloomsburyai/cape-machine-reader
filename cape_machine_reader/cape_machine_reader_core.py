@@ -4,6 +4,10 @@ from cape_machine_reader.objects.machine_reader_answer import MachineReaderAnswe
 from cape_machine_reader.cape_answer_decoder import find_best_spans, softmax
 
 
+class MachineReaderError(Exception):
+    """Errors thrown when Machine Reading Goes wrong"""
+
+
 class MachineReaderConfiguration:
     def __init__(self, threshold_reader: float = 0,
                  threshold_answer_in_document: float = 0,
@@ -37,12 +41,17 @@ class MachineReader:
         :return: two logit score distributions over the tokens of the document, for start and end span
             positions, and the number of tokens in the before_overlap and after_overlap strings
         """
+        if self._count_tokens(text) == 0:
+            raise MachineReaderError('Document cannot be empty : "{}"'.format(text))
+        if self._count_tokens(question) == 0:
+            raise MachineReaderError('Question cannot be empty : "{}"'.format(question))
         doc = self._combine_overlaps(text, before_overlap, after_overlap)
         if document_embedding is None:
             document_embedding = self.get_document_embedding(doc)
 
         n_total, n_before, n_text, n_after = map(self._count_tokens, [doc, before_overlap, text, after_overlap])
-        assert n_total == (n_before + n_text + n_after), (n_total, n_before, n_text, n_after)
+        if n_total != (n_before + n_text + n_after):
+            raise MachineReaderError('Mismatch of N tokens: {} Expected, got {}'.format(n_total, n_before + n_text + n_after))
         return self.model.get_logits(question, document_embedding), (n_before, n_after)
 
     def _count_tokens(self, text):
@@ -63,6 +72,13 @@ class MachineReader:
         :param all_combined_texts: all the document strings as a single big string
         :return: iterable of machine reader answer objects
         """
+        if len(all_the_logits) == 0:
+            raise MachineReaderError('Need at least one block of logits')
+        if len(all_the_overlaps) == 0:
+            raise MachineReaderError('Need at least one block of overlaps')
+        if len(all_the_overlaps) != len(all_the_logits):
+            raise MachineReaderError('Overlaps and logits need to be the same length')
+
         logits_array_start = np.concatenate([
             logits[overlap_start:len(logits) - overlap_end] for (logits, _),  (overlap_start, overlap_end)
             in zip(all_the_logits, all_the_overlaps)
@@ -71,9 +87,11 @@ class MachineReader:
             logits[overlap_start:len(logits) - overlap_end] for (_, logits),  (overlap_start, overlap_end)
             in zip(all_the_logits, all_the_overlaps)
         ])
-
-        assert len(logits_array_start) == self._count_tokens(all_combined_texts),\
-            'logits length mismatch {} {}'.format(len(logits_array_start), self._count_tokens(all_combined_texts))
+        if len(logits_array_start) != self._count_tokens(all_combined_texts):
+            raise MachineReaderError(
+                'logits length mismatch {} {}'.format(
+                    len(logits_array_start), self._count_tokens(all_combined_texts)
+            ))
 
         # Perform global softmax
         yp_start, yp_end = softmax(logits_array_start), softmax(logits_array_end)
@@ -108,6 +126,8 @@ class MachineReader:
         :param after_overlap:small amount text after the text to embed (optional)
         :return: numpy 2d array of floats of shape (n tokens, embedding dimension)
         """
+        if self._count_tokens(text) == 0:
+            raise MachineReaderError('Document cannot be empty : "{}"'.format(text))
         return self.model.get_document_embedding(self._combine_overlaps(text, before_overlap, after_overlap))
 
     def get_answers(self, configuration: MachineReaderConfiguration, document_text: str, question: str) \

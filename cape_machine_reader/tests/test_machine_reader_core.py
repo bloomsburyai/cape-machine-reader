@@ -1,7 +1,6 @@
 from cape_machine_reader.tests.test_machine_reader_model import DummyMachineReaderModel
-from cape_machine_reader.cape_machine_reader_core import MachineReader, MachineReaderConfiguration
-from pytest import fixture
-
+from cape_machine_reader.cape_machine_reader_core import MachineReader, MachineReaderConfiguration, MachineReaderError
+from pytest import fixture, raises
 
 @fixture
 def dummy_machine_reader_model():
@@ -43,8 +42,11 @@ def test_get_answers_produces_correct_n_answers(dummy_machine_reader_model, dumm
     dummy_mr_config.top_k = 10
     mr = MachineReader(dummy_machine_reader_model)
     answers = mr.get_answers(dummy_mr_config, context, question)
-    n_answers = len([a for a in answers])
-    assert n_answers == dummy_mr_config.top_k
+    answer_list = [a for a in answers]
+    for a in answer_list:
+        assert a.text == context[a.span[0]:a.span[1]]
+    assert len(answer_list) == dummy_mr_config.top_k
+
 
 
 def test_get_answers_from_logits_correct_n_answers(dummy_machine_reader_model, dummy_mr_config, context, question):
@@ -53,8 +55,11 @@ def test_get_answers_from_logits_correct_n_answers(dummy_machine_reader_model, d
     logits, overlaps = mr.get_logits(context, question)
     answers = mr.get_answers_from_logits(
         dummy_mr_config, [logits], [overlaps], context)
-    n_answers = len([a for a in answers])
-    assert n_answers == dummy_mr_config.top_k
+    answer_list = [a for a in answers]
+    for a in answer_list:
+        assert a.text == context[a.span[0]:a.span[1]]
+    assert len(answer_list) == dummy_mr_config.top_k
+
 
 
 def test_document_embedding_correct_shape(dummy_machine_reader_model, context, before_text, after_text):
@@ -89,3 +94,47 @@ def test_get_logits_correct_shape_with_doc_emb(dummy_machine_reader_model, dummy
     assert n_bef == len_b
     assert n_aft == len_a
 
+
+def test_combining_logits(dummy_machine_reader_model, dummy_mr_config, context, question, before_text, after_text):
+    mr = MachineReader(dummy_machine_reader_model)
+    dummy_mr_config.top_k = 10
+    n_repeats = 10
+    logits, overlaps = mr.get_logits(context, question, before_overlap=before_text, after_overlap=after_text)
+    all_logits, all_overlaps = [logits for _ in range(n_repeats)], [overlaps for _ in range(n_repeats)]
+    all_context = ' '.join([context for _ in range(n_repeats)])
+    answers = mr.get_answers_from_logits(
+        dummy_mr_config, all_logits, all_overlaps, all_context)
+    answer_list = [a for a in answers]
+    for a in answer_list:
+        assert a.text == all_context[a.span[0]:a.span[1]]
+    assert len(answer_list) == dummy_mr_config.top_k
+
+
+def test_get_document_empty_document_breaks(dummy_machine_reader_model, dummy_mr_config):
+    mr = MachineReader(dummy_machine_reader_model)
+    with raises(MachineReaderError):
+        doc_emb = mr.get_document_embedding('', before_overlap='', after_overlap='')
+
+
+def test_get_logits_empty_document_breaks(dummy_machine_reader_model, dummy_mr_config, question):
+    mr = MachineReader(dummy_machine_reader_model)
+    with raises(MachineReaderError):
+        logits, overlaps = mr.get_logits('', question)
+
+
+def test_get_logits_empty_question_breaks(dummy_machine_reader_model, dummy_mr_config, context):
+    mr = MachineReader(dummy_machine_reader_model)
+    with raises(MachineReaderError):
+        logits, overlaps = mr.get_logits(context, '')
+
+
+def test_get_answers_empty_question_breaks(dummy_machine_reader_model, dummy_mr_config, context):
+    mr = MachineReader(dummy_machine_reader_model)
+    with raises(MachineReaderError):
+        logits, overlaps = mr.get_answers(dummy_mr_config, context, '')
+
+
+def test_get_logits_empty_document_breaks(dummy_machine_reader_model, dummy_mr_config, question):
+    mr = MachineReader(dummy_machine_reader_model)
+    with raises(MachineReaderError):
+        logits, overlaps = mr.get_answers(dummy_mr_config, '', question)
