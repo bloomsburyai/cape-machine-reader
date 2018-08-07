@@ -5,15 +5,20 @@ and provides powerfully scaling answer decoding functionality for machine reader
 
 ## Who is this repo for?
 
-This repo is helpful for those wishing to build and integrate their own machine reading models into Cape
+This repo is helpful for those wishing to build and integrate their own machine reading models into Cape.
+For low-level access to a Question answering functionality the [MachineReader objects](https://github.com/bloomsburyai/cape-machine-reader/blob/master/cape_machine_reader/cape_machine_reader_core.py),
+object can be used, but most users may find the functionality exposed by [cape-responder](https://github.com/bloomsburyai/cape-responder) to be more complete and easy to
+work with at a higher level.
 
 ## Who is this repo not for?
 
-I dont know yet
+most users may find the functionality exposed by [cape-responder](https://github.com/bloomsburyai/cape-responder) to be more complete and easy to
+work with at a higher level.
 
 ## Install:
 
 To install as a site-package:
+
 ```
 pip install --upgrade --process-dependency-links git+https://github.com/bloomsburyai/cape-document-qa
 ```
@@ -59,7 +64,19 @@ ML developers could be inspired by [cape-document-qa](https://github.com/bloomsb
 open-domain machine reader and implements `CapeMachineReaderModelInterface`.
 
 An even simpler one that we use for testing (simply generates random logit scores) 
-can be found here: [cape_machine_reader_model.py](https://github.com/bloomsburyai/cape-machine-reader/blob/master/cape_machine_reader/tests/test_machine_reader_model.py).
+can be found here: [cape_machine_reader_model.py](cape_machine_reader/tests/test_machine_reader_model.py).
 
 
-We are working on other models that have different characteristics (speed/scale/accuracy) etc.
+We are working on other models that have different characteristics (speed/scale/accuracy).
+
+### Telling responder how to load your model
+
+The dependency diagram of Cape is shown below, including a second Machine reading model for clarity.
+
+![Dependencies Diagram](Dependencies_for_those_contributing_new_models.png)
+
+[cape-responder](https://github.com/bloomsburyai/cape-responder) needs to be told how to load your new model.
+Loading your model should be as simple as possible.
+
+The code that imports cape-document-qa into responder is only 2 lines, and can be found [here](https://github.com/bloomsburyai/cape-responder/blob/7fa606ecdae623a2579475d737929d3f2059c1cc/cape_responder/responder_core.py#L44). You
+can add your model loading logic adjacent to here to get Cape to use your model architecture.
