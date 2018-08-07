@@ -44,25 +44,44 @@ You can then use the machine reader in stand-alone mode:
 ```
 >>> doc = "The Harry Potter series was written by J K Rowling"
 >>> question = "Who wrote Harry Potter?"
->>> answers = mr.get_answer(mr_answer_conf, doc, question)
->>> print(next(answers.text))
-J K Rowling
+>>> answers = mr.get_answers(mr_answer_conf, doc, question)
+>>> print(next(answers).text)
+'J K Rowling'
 ```
 
 Or use it in a multistep workflow:
 
 ```
->>> doc = "The Harry Potter series was written by J K Rowling. Harry Potter is a Wizard."
->>> doc_1, doc_2 = doc.split('.')
+>>> doc = "The Harry Potter series was written by J K Rowling.\nHarry Potter is a Wizard"
+>>> doc_1, doc_2 = doc.splitlines(True)
 >>> question = " Who wrote Harry Potter?"
 >>> logits_1, offsets_1 = mr.get_logits(doc_1, question)
 >>> logits_2, offsets_2 = mr.get_logits(doc_2, question)
 >>> answers = mr.get_answers_from_logits(
-                mr_answer_conf, [logits_1, logits_2], [offsets_1, offsets_2], doc)
-
->>> print(next(answers.text))
-J K Rowling
+...    mr_answer_conf, [logits_1, logits_2], [offsets_1, offsets_2], doc)
+>>> print(next(answers).text)
+'J K Rowling'
 ```
+
+And you can prepare document embeddings before hand. You could store these document embeddings which allows
+for much faster question answering:
+
+```
+>>> doc = "The Harry Potter series was written by J K Rowling.\nHarry Potter is a Wizard"
+>>> doc_1, doc_2 = doc.splitlines(True)
+>>> doc_1_embedded = mr.get_document_embedding(doc_1)
+>>> doc_2_embedded = mr.get_document_embedding(doc_2)
+>>> # this does faster answering:
+>>> logits_1, offsets_1 = mr.get_logits(doc_1, question, document_embedding=doc_1_embedded)
+>>> logits_2, offsets_2 = mr.get_logits(doc_2, question, document_embedding=doc_2_embedded)
+answers = mr.get_answers_from_logits(
+...    mr_answer_conf, [logits_1, logits_2], [offsets_1, offsets_2], doc)
+>>> print(next(answers).text)
+'J K Rowling'
+```
+
+Note that documents shouldn't be longer than about 500 words for performant machine reading
+
 
 ## Integrating your own model:
 
